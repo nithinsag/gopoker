@@ -16,8 +16,8 @@ func LoginRequestHandler(w http.ResponseWriter, r *http.Request) {
 	var credential models.Credential
 	_ = dec.Decode(&credential)
 	fmt.Println(credential)
-	user := models.GetUserFromCredential(credential)
-	token := models.Token{Token: "sdafasdfasdf"}
+	user, token := models.GetUserFromCredential(credential)
+	//token := models.Token{Token: "sdafasdfasdf"}
 	fmt.Println(user)
 	json.NewEncoder(w).Encode(token)
 }

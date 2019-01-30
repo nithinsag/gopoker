@@ -3,7 +3,9 @@ package models
 import (
 	"fmt"
 	"log"
+	"time"
 
+	jwt "github.com/dgrijalva/jwt-go"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -51,6 +53,21 @@ func comparePasswords(hashedPwd string, plainPwd []byte) bool {
 	return true
 }
 
+func GenerateToken(user User) string {
+	// Create a new token object, specifying signing method and the claims
+	// you would like it to contain.
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user": user.Email,
+		"nbf":  time.Date(2015, 10, 10, 12, 0, 0, 0, time.UTC).Unix(),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString("hmacSampleSecret")
+
+	fmt.Println(tokenString, err)
+	return tokenString
+}
+
 func MigrateUsers() {
 	fmt.Println(db)
 	db.AutoMigrate(User{})
@@ -60,8 +77,10 @@ func MigrateUsers() {
 	fmt.Println(dbc.Error)
 }
 
-func GetUserFromCredential(credential Credential) User {
+func GetUserFromCredential(credential Credential) (User, string) {
 	var user User
+	var token string
+
 	fmt.Println(credential)
 	db.First(&user, "email = ?", credential.Email)
 	fmt.Println("looked up user", user)
@@ -69,5 +88,8 @@ func GetUserFromCredential(credential Credential) User {
 	authenticated := comparePasswords(user.Password, []byte(credential.Password))
 	//TODO: implement password hashing
 	fmt.Println(authenticated)
-	return user
+	if authenticated {
+		token = GenerateToken(user)
+	}
+	return user, token
 }
