@@ -62,9 +62,9 @@ func GenerateToken(user User) string {
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString("hmacSampleSecret")
+	tokenString, err := token.SignedString([]byte("hmacSampleSecret"))
 
-	fmt.Println(tokenString, err)
+	fmt.Println("token", tokenString, err)
 	return tokenString
 }
 
