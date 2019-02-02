@@ -1,39 +1,38 @@
 package helpers
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/context"
+	"github.com/diadara/gopoker/user"
 )
 
-func ValidateMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		authorizationHeader := req.Header.Get("authorization")
-		if authorizationHeader != "" {
-			bearerToken := strings.Split(authorizationHeader, " ")
-			if len(bearerToken) == 2 {
-				token, error := jwt.Parse(bearerToken[1], func(token *jwt.Token) (interface{}, error) {
-					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("There was an error")
-					}
-					return []byte("secret"), nil
-				})
-				if error != nil {
-					json.NewEncoder(w).Encode(Exception{Message: error.Error()})
-					return
-				}
-				if token.Valid {
-					context.Set(req, "decoded", token.Claims)
-					next(w, req)
-				} else {
-					json.NewEncoder(w).Encode(Exception{Message: "Invalid authorization token"})
-				}
-			}
-		} else {
-			json.NewEncoder(w).Encode(Exception{Message: "An authorization header is required"})
+type key int
+
+const tokenKey key = 0
+
+// AuthenticationMiddleware that takes the authorization token and validates
+// the token and puts it in context
+// Rejects the request if invalid
+func AuthenticationMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		fmt.Println("autj", auth)
+
+		if len(auth) != 1 {
+			http.Error(w, "authorization failed", http.StatusUnauthorized)
+			return
 		}
+
+		tokenString := auth[0]
+		isValid, token := user.Validate(string(tokenString))
+		if !isValid {
+			http.Error(w, "authorization failed", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), tokenKey, token)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

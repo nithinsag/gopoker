@@ -1,29 +1,61 @@
-package models
+package user
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
-	"github.com/spf13/viper"
-
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/diadara/gopoker/db"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// LoginRequestHandler returns a token if credentials are valid
+func LoginRequestHandler(w http.ResponseWriter, r *http.Request) {
+	dec := json.NewDecoder(r.Body)
+	var credential Credential
+	_ = dec.Decode(&credential)
+	fmt.Println(credential)
+	user, token := GetUserFromCredential(credential)
+	//token := models.Token{Token: "sdafasdfasdf"}
+	fmt.Println(user)
+	json.NewEncoder(w).Encode(token)
+}
+
+// RequestHandler handles /me route
+func RequestHandler(w http.ResponseWriter, r *http.Request) {
+	json.NewEncoder(w).Encode("You are logged in")
+}
+
+// User type
 type User struct {
 	Email     string `json:"email"`
 	FirstName string `json:"firstName"`
 	Password  string
 }
 
+// Credential type
 type Credential struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+// Token type
 type Token struct {
 	Token string `json:"token,omitempty"`
+}
+
+//MigrateUsers populates first users
+func MigrateUsers() {
+	fmt.Println(db.Db)
+	db.Db.AutoMigrate(User{})
+	//TODO: implement password hashing
+	dbc := db.Db.Create(&User{Email: "nithin@fabelio.com", FirstName: "Maveli", Password: hashAndSalt([]byte("secretpassword"))})
+	fmt.Println("created user")
+	fmt.Println(dbc.Error)
 }
 
 func hashAndSalt(pwd []byte) string {
@@ -55,7 +87,7 @@ func comparePasswords(hashedPwd string, plainPwd []byte) bool {
 	return true
 }
 
-func GenerateToken(user User) string {
+func generateToken(user User) string {
 	// Create a new token object, specifying signing method and the claims
 	// you would like it to contain.
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
@@ -73,6 +105,7 @@ func GenerateToken(user User) string {
 	return tokenString
 }
 
+// Validate the tokenstring and return token if valid
 func Validate(tokenString string) (bool, *jwt.Token) {
 	// sample token string taken from the New example
 
@@ -99,28 +132,20 @@ func Validate(tokenString string) (bool, *jwt.Token) {
 	return false, nil
 }
 
-func MigrateUsers() {
-	fmt.Println(db)
-	db.AutoMigrate(User{})
-	//TODO: implement password hashing
-	dbc := db.Create(&User{Email: "nithin@fabelio.com", FirstName: "Maveli", Password: hashAndSalt([]byte("secretpassword"))})
-	fmt.Println("created user")
-	fmt.Println(dbc.Error)
-}
-
+// GetUserFromCredential gets the user from the credential
 func GetUserFromCredential(credential Credential) (User, string) {
 	var user User
 	var token string
 
 	fmt.Println(credential)
-	db.First(&user, "email = ?", credential.Email)
+	db.Db.First(&user, "email = ?", credential.Email)
 	fmt.Println("looked up user", user)
 	fmt.Println("got credential", credential)
 	authenticated := comparePasswords(user.Password, []byte(credential.Password))
 	//TODO: implement password hashing
 	fmt.Println(authenticated)
 	if authenticated {
-		token = GenerateToken(user)
+		token = generateToken(user)
 	}
 	fmt.Println("generated token", token)
 	return user, token
