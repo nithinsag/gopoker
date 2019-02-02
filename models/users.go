@@ -87,7 +87,7 @@ func Validate(tokenString string) (bool, *jwt.Token) {
 		}
 
 		// hmacSampleSecret is a []byte containing your secret, e.g. []byte("my_secret_key")
-		return viper.GetString("secret"), nil
+		return []byte(viper.GetString("secret")), nil
 	})
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
