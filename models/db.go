@@ -2,7 +2,9 @@ package models
 
 import (
 	"fmt"
+
 	"github.com/jinzhu/gorm"
+	"github.com/spf13/viper"
 )
 
 var db *gorm.DB
@@ -10,7 +12,7 @@ var db *gorm.DB
 func InitDB() *gorm.DB {
 	var err error
 
-	db, err = gorm.Open("sqlite3", "test.db")
+	db, err = gorm.Open("sqlite3", viper.GetString("dbname"))
 	if err != nil {
 		panic("failed to connect database")
 	}
