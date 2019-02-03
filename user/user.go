@@ -34,6 +34,7 @@ func RequestHandler(w http.ResponseWriter, r *http.Request) {
 type User struct {
 	Email     string `json:"email"`
 	FirstName string `json:"firstName"`
+	Money     int    `json:"money"`
 	Password  string
 }
 
@@ -53,7 +54,7 @@ func MigrateUsers() {
 	fmt.Println(db.Db)
 	db.Db.AutoMigrate(User{})
 	//TODO: implement password hashing
-	dbc := db.Db.Create(&User{Email: "nithin@fabelio.com", FirstName: "Maveli", Password: hashAndSalt([]byte("secretpassword"))})
+	dbc := db.Db.Create(&User{Email: "nithin@fabelio.com", Money: 20000, FirstName: "Maveli", Password: hashAndSalt([]byte("secretpassword"))})
 	fmt.Println("created user")
 	fmt.Println(dbc.Error)
 }
